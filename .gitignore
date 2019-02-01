@@ -1,6 +1,13 @@
 # Prerequisites
 *.d
 
+# Custom: Changes to make the code compile on mac and cise server.
+y.tab.h
+y.tab.c
+Makefile
+main
+lex.yy.c
+
 # Compiled Object files
 *.slo
 *.lo
