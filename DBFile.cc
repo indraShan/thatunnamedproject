@@ -33,7 +33,7 @@ bool fileExists(const char* f_path) {
 int DBFile::Create (const char *f_path, fType f_type, void *startup) {
     cout << "create called \n";
     // Assumption: if file already exists, it would be over written.
-    actualFile->Open(0, strdup(f_path));
+    actualFile->Open(0, f_path);
     return 1;
 }
 
