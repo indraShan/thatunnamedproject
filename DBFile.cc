@@ -8,16 +8,8 @@
 #include "Defs.h"
 #include <iostream>
 
-DBFile::DBFile()
-{
-    actualFile = new File();
-    currentPage = new Page();
-    currentReadPageIndex = 0;
-    lastReturnedRecordIndex = -1;
-    // By default we start off in read mode.
-    inReadMode = true;
-    // TODO: This is wrong, but okay for now.
-    fileType = heap;
+DBFile::DBFile() {
+
 }
 
 DBFile ::~DBFile()
@@ -33,8 +25,16 @@ bool DBFile::fileExists(const char *f_path) {
     return (stat(f_path, &buf) == 0);
 }
 
-void DBFile::initState(bool createFile, const char *f_path)
-{
+void DBFile::initState(bool createFile, const char *f_path) {
+    actualFile = new File();
+    currentPage = new Page();
+    currentReadPageIndex = 0;
+    lastReturnedRecordIndex = -1;
+    // By default we start off in read mode.
+    inReadMode = true;
+    // TODO: This is wrong, but okay for now.
+    fileType = heap;
+
     // Create or open the file.
     actualFile->Open(createFile == true ? 0 : 1, f_path);
     currentPage->EmptyItOut();
@@ -80,27 +80,39 @@ int DBFile::Open(const char *f_path) {
     return 1;
 }
 
-void DBFile::MoveFirst()
-{
+void DBFile::MoveFirst() {
+    if (!inReadMode) {
+        // Write dirty changes back to disk.
+        writePageToDisk(currentPage);
+        currentPage->EmptyItOut();
+        inReadMode = true;
+    }
     // Move the read indexes back to zero.
     currentReadPageIndex = 0;
     lastReturnedRecordIndex = -1;
 
-    // TODO: Write dirty data
-    // Switch the page to 0th.
+    updatePageToLocation(currentPage, currentReadPageIndex, lastReturnedRecordIndex);
 }
 
 // TODO: Write dirty data
 int DBFile::Close() {
-    if (actualFile != NULL) {
-        cout << "Close called. Number of pages = " << actualFile->Close() << "\n";
-        delete actualFile;
-        actualFile = NULL;
+    cout << "Close called.\n";
+    // If file or page is null, we have already closed this file.
+    if (actualFile == NULL || currentPage == NULL) return 0;
+
+    if (!inReadMode) {
+        // We have un-written data.
+        writePageToDisk(currentPage);
+        currentPage->EmptyItOut();
+        inReadMode = true;
     }
-    if (currentPage != NULL) {
-        delete currentPage;
-        currentPage = NULL;
-    }
+    actualFile->Close();
+    delete actualFile;
+    actualFile = NULL;
+
+    delete currentPage;
+    currentPage = NULL;
+    return 0;
 }
 
 // Warning: Empties out the page passed-in.
@@ -159,7 +171,7 @@ void DBFile::updatePageToLocation(Page *page, int pageIndex, int location) {
     // Pop elements till we are at the given location.
     int index = -1;
     Record temp;
-    while (index == location) {
+    while (index != location) {
         page->GetFirst(&temp);
         index++;
     }
@@ -184,7 +196,8 @@ int DBFile::GetNext(Record &fetchme) {
         // and call this method again.
         int length = actualFile->GetLength();
         if (length == currentReadPageIndex) return 0;
-        updatePageToLocation(currentPage, currentReadPageIndex++, 0);
+        lastReturnedRecordIndex = -1;
+        updatePageToLocation(currentPage, currentReadPageIndex++, lastReturnedRecordIndex);
         return GetNext(fetchme);
     }
     lastReturnedRecordIndex++;
