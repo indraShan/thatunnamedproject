@@ -13,7 +13,7 @@ DBFile::DBFile()
     actualFile = new File();
     currentPage = new Page();
     currentReadPageIndex = 0;
-    lastReturnedRecordIndex = 0;
+    lastReturnedRecordIndex = -1;
     // By default we start off in read mode.
     inReadMode = true;
     // TODO: This is wrong, but okay for now.
@@ -26,10 +26,9 @@ DBFile ::~DBFile()
     Close();
 }
 
-// Returns true if the file exists.
+// Returns true if the file exists at given path.
 // false otherwise.
-bool fileExists(const char *f_path)
-{
+bool DBFile::fileExists(const char *f_path) {
     struct stat buf;
     return (stat(f_path, &buf) == 0);
 }
@@ -38,13 +37,15 @@ void DBFile::initState(bool createFile, const char *f_path)
 {
     // Create or open the file.
     actualFile->Open(createFile == true ? 0 : 1, f_path);
-    // By default we start with read mode.
+    currentPage->EmptyItOut();
+    // By default we start in read mode.
     // So fetch the first page if:
-    //      - We are opening an existing file.
+    //      - We are opening an existing file and
     //      - The file has data.
     if (!createFile && actualFile->GetLength() > 0) {
         actualFile->GetPage(currentPage, 0);
     }
+    cout << "Number of pages = " << actualFile->GetLength() << "\n";
 }
 
 int DBFile::Create(const char *f_path, fType f_type, void *startup)
@@ -60,19 +61,21 @@ void DBFile::Load(Schema &f_schema, const char *loadpath) {
     FILE *tableFile = fopen(loadpath, "r");
     ComparisonEngine comp;
     Record temp;
+    int count = 0;
     while (temp.SuckNextRecord(&f_schema, tableFile) == 1) {
        Add(temp);
+       count++;
     }
-    cout << "Done with records !!!!! \n";
+    cout << "Added " << count << " records !!!!! \n";
 }
 
-int DBFile::Open(const char *f_path)
-{
+// TODO: Handle the case when open and close are 
+// called on the same DBFile instance.
+int DBFile::Open(const char *f_path) {
+    cout << "Open called \n";
     // Return failure if we can't find the file at
     // the given path.
-    if (!fileExists(f_path))
-        return 0;
-    cout << "File open called \n";
+    if (!fileExists(f_path)) return 0;
     initState(false, f_path);
     return 1;
 }
@@ -81,34 +84,32 @@ void DBFile::MoveFirst()
 {
     // Move the read indexes back to zero.
     currentReadPageIndex = 0;
-    lastReturnedRecordIndex = 0;
+    lastReturnedRecordIndex = -1;
+
+    // TODO: Write dirty data
+    // Switch the page to 0th.
 }
 
-int DBFile::Close()
-{
-    cout << "Close called \n";
-    if (actualFile != NULL)
-    {
-        actualFile->Close();
+// TODO: Write dirty data
+int DBFile::Close() {
+    if (actualFile != NULL) {
+        cout << "Close called. Number of pages = " << actualFile->Close() << "\n";
         delete actualFile;
         actualFile = NULL;
     }
-    if (currentPage != NULL)
-    {
+    if (currentPage != NULL) {
         delete currentPage;
         currentPage = NULL;
     }
 }
 
 // Warning: Empties out the page passed-in.
-void DBFile::updateToLastPage(Page *page)
-{
+void DBFile::updateToLastPage(Page *page) {
     // Get rid of current data.
     page->EmptyItOut();
     // Get the last page.
     int length = actualFile->GetLength();
-    if (length > 0)
-    {
+    if (length > 0) {
         actualFile->GetPage(page, length - 1);
     }
 }
@@ -116,12 +117,10 @@ void DBFile::updateToLastPage(Page *page)
 // This thing?
 // Note that this function should actually consume addMe,
 // so that after addMe has been put into the file, it cannot be used again.
-void DBFile::Add(Record &rec)
-{
+void DBFile::Add(Record &rec) {
     // If we are in read mode, switch to write mode and
     // fetch the last page.
-    if (inReadMode)
-    {
+    if (inReadMode) {
         inReadMode = false;
         // We won't be losing any data because of this page
         // switch, as dirty data gets written to disk when the mode
@@ -133,22 +132,65 @@ void DBFile::Add(Record &rec)
 
     // We are in write mode, which means the page we have in memory now
     // is the last page to which we can write.
-    if (currentPage->Append(&rec) == 0)
-    {
+    // TODO: Should we avoid a page rewrite when the page we get is
+    // already full (even before the first call to add).
+    if (currentPage->Append(&rec) == 0) {
         // Append failed-> Page is full.
         // Write this current page to disk.
-        int length = actualFile->GetLength();
-        actualFile->AddPage(currentPage, length);
+        writePageToDisk(currentPage);
         currentPage->EmptyItOut();
         Add(rec);
         return;
     }
 }
 
-int DBFile::GetNext(Record &fetchme)
-{
+void DBFile::writePageToDisk(Page *page) {
+    int length = actualFile->GetLength();
+    actualFile->AddPage(page, length);
 }
 
-int DBFile::GetNext(Record &fetchme, CNF &cnf, Record &literal)
-{
+// Warning: Current data if any will be erased from the page.
+void DBFile::updatePageToLocation(Page *page, int pageIndex, int location) {
+    cout << "updatePageToLocation called. pageIndex = " << pageIndex << "\n";
+    // Get rid of current data.
+    page->EmptyItOut();
+    // Get the page at the given index.
+    actualFile->GetPage(page, pageIndex);
+    // Pop elements till we are at the given location.
+    int index = -1;
+    Record temp;
+    while (index == location) {
+        page->GetFirst(&temp);
+        index++;
+    }
+}
+
+int DBFile::GetNext(Record &fetchme) {
+    if (inReadMode == false) {
+        // We are in write mode.
+        // We may have dirty data which is not yet written to disk.
+        writePageToDisk(currentPage);
+        inReadMode = true;
+        // Get the page that corresponds to last read location.
+        updatePageToLocation(currentPage, currentReadPageIndex, lastReturnedRecordIndex);
+        return GetNext(fetchme);
+    }
+    // We are in read mode - which means we can just get 
+    // the first record from the current page.
+    if (currentPage->GetFirst(&fetchme) == 0) {
+        // Read failed -> page is empty.
+        // If this was the last page of the file, we don't have 
+        // any more records. Otherwise just move to next page
+        // and call this method again.
+        int length = actualFile->GetLength();
+        if (length == currentReadPageIndex) return 0;
+        updatePageToLocation(currentPage, currentReadPageIndex++, 0);
+        return GetNext(fetchme);
+    }
+    lastReturnedRecordIndex++;
+    
+    return 1;
+}
+
+int DBFile::GetNext(Record &fetchme, CNF &cnf, Record &literal) {
 }

@@ -26,6 +26,9 @@ private:
 	bool inReadMode;
 	void initState(bool createFile, const char *f_path);
 	void updateToLastPage(Page *page);
+	bool fileExists(const char *f_path);
+	void writePageToDisk(Page *page);
+	void updatePageToLocation(Page *page, int pageIndex, int location);
 
 public:
 	DBFile (); 
