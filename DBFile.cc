@@ -39,10 +39,8 @@ void DBFile::initState(bool createFile, const char *f_path) {
     actualFile->Open(createFile == true ? 0 : 1, f_path);
     currentPage->EmptyItOut();
     // By default we start in read mode.
-    // So fetch the first page if:
-    //      - We are opening an existing file and
-    //      - The file has data.
-    if (!createFile && actualFile->GetLength() > 0) {
+    // So fetch the first page if the file has data.
+    if (actualFile->GetLength() > 0) {
         actualFile->GetPage(currentPage, 0);
     }
     cout << "Number of pages = " << actualFile->GetLength() << "\n";
@@ -122,7 +120,7 @@ void DBFile::updateToLastPage(Page *page) {
     // Get the last page.
     int length = actualFile->GetLength();
     if (length > 0) {
-        actualFile->GetPage(page, length - 1);
+        actualFile->GetPage(page, length - 2);
     }
 }
 
@@ -130,6 +128,7 @@ void DBFile::updateToLastPage(Page *page) {
 // Note that this function should actually consume addMe,
 // so that after addMe has been put into the file, it cannot be used again.
 void DBFile::Add(Record &rec) {
+    cout << "Add called \n";
     // If we are in read mode, switch to write mode and
     // fetch the last page.
     if (inReadMode) {
@@ -158,7 +157,8 @@ void DBFile::Add(Record &rec) {
 
 void DBFile::writePageToDisk(Page *page) {
     int length = actualFile->GetLength();
-    actualFile->AddPage(page, length);
+    int offset = length == 0? 0 : length - 1;
+    actualFile->AddPage(page, offset);
 }
 
 // Warning: Current data if any will be erased from the page.
@@ -195,7 +195,7 @@ int DBFile::GetNext(Record &fetchme) {
         // any more records. Otherwise just move to next page
         // and call this method again.
         int length = actualFile->GetLength();
-        if (length == currentReadPageIndex) return 0;
+        if (currentReadPageIndex + 2 >= length) return 0;
         lastReturnedRecordIndex = -1;
         updatePageToLocation(currentPage, currentReadPageIndex++, lastReturnedRecordIndex);
         return GetNext(fetchme);
