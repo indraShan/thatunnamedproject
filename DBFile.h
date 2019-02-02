@@ -23,6 +23,9 @@ private:
 	int currentReadPageIndex;
 	int lastReturnedRecordIndex;
 	fType fileType;
+	bool inReadMode;
+	void initState(bool createFile, const char *f_path);
+	void updateToLastPage(Page *page);
 
 public:
 	DBFile (); 
