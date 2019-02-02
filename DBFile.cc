@@ -197,7 +197,7 @@ int DBFile::GetNext(Record &fetchme) {
         int length = actualFile->GetLength();
         if (currentReadPageIndex + 2 >= length) return 0;
         lastReturnedRecordIndex = -1;
-        updatePageToLocation(currentPage, currentReadPageIndex++, lastReturnedRecordIndex);
+        updatePageToLocation(currentPage, ++currentReadPageIndex, lastReturnedRecordIndex);
         return GetNext(fetchme);
     }
     lastReturnedRecordIndex++;
@@ -206,4 +206,11 @@ int DBFile::GetNext(Record &fetchme) {
 }
 
 int DBFile::GetNext(Record &fetchme, CNF &cnf, Record &literal) {
+    ComparisonEngine comp;
+    while (GetNext(fetchme) == 1) {
+        if (comp.Compare (&fetchme, &literal, &cnf)) {
+            return 1;
+        }
+    }
+    return 0;
 }
