@@ -128,7 +128,7 @@ void DBFile::updateToLastPage(Page *page) {
 // Note that this function should actually consume addMe,
 // so that after addMe has been put into the file, it cannot be used again.
 void DBFile::Add(Record &rec) {
-    cout << "Add called \n";
+    // cout << "Add called \n";
     // If we are in read mode, switch to write mode and
     // fetch the last page.
     if (inReadMode) {
@@ -163,7 +163,7 @@ void DBFile::writePageToDisk(Page *page) {
 
 // Warning: Current data if any will be erased from the page.
 void DBFile::updatePageToLocation(Page *page, int pageIndex, int location) {
-    cout << "updatePageToLocation called. pageIndex = " << pageIndex << "\n";
+    // cout << "updatePageToLocation called. pageIndex = " << pageIndex << "\n";
     // Get rid of current data.
     page->EmptyItOut();
     // Get the page at the given index.
