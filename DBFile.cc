@@ -27,6 +27,7 @@ void DBFile::initState(bool createFile, const char *f_path) {
     currentPage = new Page();
     currentReadPageIndex = 0;
     lastReturnedRecordIndex = -1;
+    writeInPlace = false;
     // By default we start off in read mode.
     inReadMode = true;
     // TODO: This is wrong, but okay for now.
@@ -75,6 +76,7 @@ int DBFile::Open(const char *f_path) {
 }
 
 void DBFile::MoveFirst() {
+    // cout << "MoveFirst called \n";
     if (!inReadMode) {
         // Write dirty changes back to disk.
         writePageToDisk(currentPage);
@@ -105,7 +107,7 @@ int DBFile::Close() {
 
     delete currentPage;
     currentPage = NULL;
-    return 0;
+    return 1;
 }
 
 // Warning: Empties out the page passed-in.
@@ -119,15 +121,14 @@ void DBFile::updateToLastPage(Page *page) {
     }
 }
 
-// This thing?
-// Note that this function should actually consume addMe,
-// so that after addMe has been put into the file, it cannot be used again.
 void DBFile::Add(Record &rec) {
     // cout << "Add called \n";
     // If we are in read mode, switch to write mode and
     // fetch the last page.
     if (inReadMode) {
+        // cout << "IN READ MODE \n"; 
         inReadMode = false;
+        writeInPlace = true;
         // We won't be losing any data because of this page
         // switch, as dirty data gets written to disk when the mode
         // changed to read last time around.
@@ -151,9 +152,12 @@ void DBFile::Add(Record &rec) {
 }
 
 void DBFile::writePageToDisk(Page *page) {
+    // cout << "write page called \n";
     int length = actualFile->GetLength();
-    int offset = length == 0? 0 : length - 1;
+    int writeLocation = writeInPlace ? length - 2 : length - 1; 
+    int offset = length == 0? 0 : writeLocation;
     actualFile->AddPage(page, offset);
+    writeInPlace = false;
 }
 
 // Warning: Current data if any will be erased from the page.
@@ -161,6 +165,8 @@ void DBFile::updatePageToLocation(Page *page, int pageIndex, int location) {
     // cout << "updatePageToLocation called. pageIndex = " << pageIndex << "\n";
     // Get rid of current data.
     page->EmptyItOut();
+    int length = actualFile->GetLength();
+    if (length == 0) return;
     // Get the page at the given index.
     actualFile->GetPage(page, pageIndex);
     // Pop elements till we are at the given location.

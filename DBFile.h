@@ -18,6 +18,7 @@ typedef enum {heap, sorted, tree} fType;
 class DBFile {
 
 private:
+	bool writeInPlace;
 	File *actualFile;
 	Page *currentPage;
 	int currentReadPageIndex;
