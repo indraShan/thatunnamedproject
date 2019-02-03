@@ -54,9 +54,9 @@ q2
 (r_regionkey > 1)
 
 q3 
-(n_regionkey = 3) AND
-(n_nationkey > 10) AND
-(n_name > 'japan')
+(n_regionkey > 1) AND
+(n_nationkey > 5) AND
+(n_name > 'Japan')
 
 q4 
 (s_suppkey < 10)
@@ -67,16 +67,16 @@ q5
 (s_suppkey < 400)
 
 q6
-(c_nationkey = 23) AND
+(c_nationkey > 18) AND
 (c_mktsegment = 'FURNITURE') AND
-(c_acctbal > 7023.99) AND
+(c_acctbal > 100.00) AND
 (c_acctbal < 7110.83)
 
 
 q7 
 (p_brand = 'Brand#13') AND
-(p_retailprice > 500) AND
-(p_retailprice < 930) AND
+(p_retailprice > 500.0) AND
+(p_retailprice < 930.0) AND
 (p_size > 28) AND
 (p_size < 1000000)
 
@@ -100,7 +100,7 @@ q11
 (l_shipdate < '1994-01-07') AND
 (l_discount > 0.05) AND
 (l_discount < 0.06) AND
-(l_quantity = 4) 
+(l_quantity = 4.0) 
 
 
 q12

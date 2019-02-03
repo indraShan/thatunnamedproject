@@ -8,12 +8,9 @@
 #include "Defs.h"
 #include <iostream>
 
-DBFile::DBFile() {
+DBFile::DBFile() {}
 
-}
-
-DBFile ::~DBFile()
-{
+DBFile ::~DBFile() {
     cout << "DBFile being destroyed\n";
     Close();
 }
@@ -56,6 +53,7 @@ int DBFile::Create(const char *f_path, fType f_type, void *startup)
 
 void DBFile::Load(Schema &f_schema, const char *loadpath) {
     cout << "Load called. \n";
+    if (!fileExists(loadpath)) return;
     FILE *tableFile = fopen(loadpath, "r");
     ComparisonEngine comp;
     Record temp;
@@ -67,8 +65,6 @@ void DBFile::Load(Schema &f_schema, const char *loadpath) {
     cout << "Added " << count << " records !!!!! \n";
 }
 
-// TODO: Handle the case when open and close are 
-// called on the same DBFile instance.
 int DBFile::Open(const char *f_path) {
     cout << "Open called \n";
     // Return failure if we can't find the file at
@@ -92,7 +88,6 @@ void DBFile::MoveFirst() {
     updatePageToLocation(currentPage, currentReadPageIndex, lastReturnedRecordIndex);
 }
 
-// TODO: Write dirty data
 int DBFile::Close() {
     cout << "Close called.\n";
     // If file or page is null, we have already closed this file.
