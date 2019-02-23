@@ -116,6 +116,7 @@ TEST(CreateEmptyFileWithoutClose, Positive) {
 	DBFile dbfile;
 	int result = dbfile.Create ("valid_file_path2", heap, NULL);
 	ASSERT_TRUE(result == 1);
+	result = dbfile.Open ("valid_file_path2");
 }
 
 int main (int argc, char *argv[]) {
