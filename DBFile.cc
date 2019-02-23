@@ -14,7 +14,7 @@ DBFile::DBFile() {
 }
 
 DBFile ::~DBFile() {
-    cout << "DBFile being destroyed\n";
+    // cout << "DBFile being destroyed\n";
     Close();
 }
 
@@ -44,19 +44,19 @@ void DBFile::initState(bool createFile, const char *f_path) {
     if (actualFile->GetLength() > 0) {
         actualFile->GetPage(currentPage, 0);
     }
-    cout << "Number of pages = " << actualFile->GetLength() << "\n";
+    // cout << "Number of pages = " << actualFile->GetLength() << "\n";
 }
 
 int DBFile::Create(const char *f_path, fType f_type, void *startup)
 {
-    cout << "create called \n";
+    // cout << "create called \n";
     // Assumption: if file already exists, it would be over written.
     initState(true, f_path);
     return 1;
 }
 
 void DBFile::Load(Schema &f_schema, const char *loadpath) {
-    cout << "Load called. \n";
+    // cout << "Load called. \n";
     if (!fileExists(loadpath)) return;
     FILE *tableFile = fopen(loadpath, "r");
     ComparisonEngine comp;
@@ -66,11 +66,11 @@ void DBFile::Load(Schema &f_schema, const char *loadpath) {
        Add(temp);
        count++;
     }
-    cout << "Added " << count << " records !!!!! \n";
+    // cout << "Added " << count << " records !!!!! \n";
 }
 
 int DBFile::Open(const char *f_path) {
-    cout << "Open called \n";
+    // cout << "Open called \n";
     // Return failure if we can't find the file at
     // the given path.
     if (!fileExists(f_path)) return 0;
@@ -94,7 +94,7 @@ void DBFile::MoveFirst() {
 }
 
 int DBFile::Close() {
-    cout << "Close called.\n";
+    // cout << "Close called.\n";
     // If file or page is null, we have already closed this file.
     if (actualFile == NULL || currentPage == NULL) return 0;
 
